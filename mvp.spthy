@@ -1,0 +1,717 @@
+
+/*
+*  Author: Julius Figge
+*  Model Name: LogUploadSecuredWithHsmKey_secrecy.spthy
+*  Status: DEVELOPMENTAL
+*
+*  Comments:
+*   sequenceDiagram
+*	box Internal
+*		participant UseCase
+*	end
+*	box Intermediate
+*		participant TgwWithHsm
+*	end
+*	box InternetFacing
+*		participant Router
+*		participant TCU
+*	end
+*	box Backend
+*		participant Target
+*	end
+*
+*	Note right of TgwWithHsm: Fr(~secretKey)
+*	Note right of TgwWithHsm: aenc(~secretKey,publicKeyUseCase), aenc(~secretKey,publicKeyTarget)
+*	par
+*		TgwWithHsm->UseCase:encryptedSecretkey
+*		Note right of UseCase: ~secretKey=adec(~secretKey,privateKeyUseCase)
+*	and
+*		TgwWithHsm->Router:encryptedSecretkey
+*		Router->TCU:encryptedSecretkey
+*		TCU->Target:encryptedSecretkey
+*		Note right of Target: ~secretKey=adec(~secretKey,privateKeyTarget)
+*	end
+*
+*	Note right of UseCase: Fr(~logfile)
+*	Note right of UseCase: wrappedLogfile=senc(~logfile,~secretKey)
+*	Note right of UseCase: encryptedWrappedLogfile=aenc(wrappedLogfile,publicKeyRouter)
+*	UseCase->TgwWithHsm: encryptedWrappedLogfile
+*	TgwWithHsm->Router: encryptedWrappedLogfile
+*	Note right of Router: wrappedLogfile=adec(encryptedWrappedLogfile,privateKeyRouter)
+*	Router->TCU: wrappedLogfile
+*	Note right of TCU: encryptedWrappedLogfile=aenc(wrappedLogfile,publicKeyTarget)
+*	TCU->Target: encryptedWrappedLogfile
+*	Note right of Target: wrappedLogfile=adec(encryptedWrappedLogfile,privateKeyTarget)
+*	Note right of Target: ~logfile=sdec(wrappedLogfile,~secretKey)
+*/
+
+theory LogUploadSecuredWithHsmKey_secrecy
+begin
+
+builtins: asymmetric-encryption, symmetric-encryption
+
+macros:
+    CarInternal()='CAR_INTERNAL',
+    CarIntermediate()='CAR_INTERMEDIATE',
+    CarInternetFacing()='CAR_INTERNET_FACING',
+    Backend()='BACKEND'
+
+/* RULE COLORING:
+    preperation for Extract/Malicious:
+        light-red: #E87D88
+    Extraction/Malicious:
+        dark-red: #DC3545
+*/
+
+//INSERTCODEHERE
+
+/* PKI */
+rule PKI_RegisterKey:
+    let
+        publickey = pk(~privatekey)
+    in
+    [
+        Fr(~privatekey)
+    ]
+    --[
+        PrivatekeyRegistered($Entity)
+    ]->
+    [
+        !Privatekey($Entity,~privatekey),
+        !Publickey($Entity,publickey),
+        Out(publickey)
+    ]
+
+rule PKI_KeyReveal [color=#DC3545]:
+    [
+        !Privatekey($Entity,~privatekey)
+    ]
+    --[
+        PkiPrivatekeyReveal($Entity)
+    ]->
+    [ Out(~privatekey) ]
+
+restriction singleInstanceOfKeyPerEntity:
+    "
+        All entity #i #j .
+            PrivatekeyRegistered(entity)@i &
+            PrivatekeyRegistered(entity)@j
+                ==>
+                    #i=#j
+    "
+
+/* Entities */
+rule Entities_Initialize:
+    [  ]
+    --[
+        InitializedEntities(),
+        NoSameEntities($UseCase,$TgwWithHsm,$Router,$TCU,$Target)
+    ]->
+    [
+        !SomeUseCase($UseCase),
+        !SomeTgwWithHsm($TgwWithHsm),
+        !SomeRouter($Router),
+        !SomeTCU($TCU),
+        !SomeTarget($Target),
+        Out($UseCase),
+        Out($TgwWithHsm),
+        Out($Router),
+        Out($TCU),
+        Out($Target)
+    ]
+
+restriction EachEntityIsSeperate:
+        "
+            All useCase tgwWithHsm router tCU target #i .
+            NoSameEntities(useCase,tgwWithHsm,router,tCU,target)@i
+                    ==>
+                        not(useCase=tgwWithHsm) &
+                        not(useCase=router) &
+                        not(useCase=tCU) &
+                        not(useCase=target) &
+                        not(tgwWithHsm=router) &
+                        not(tgwWithHsm=tCU) &
+                        not(tgwWithHsm=target) &
+                        not(router=tCU) &
+                        not(router=target) &
+                        not(tCU=target)
+        "
+
+restriction singleInstanceOfEntities:
+        "
+            All  #i #j .
+                InitializedEntities()@i &
+                InitializedEntities()@j
+                    ==>
+                        #i=#j
+        "
+
+/* Secure Channel */
+rule SecureChannel_Send:
+    [ ChannelOut(FromDomain,ToDomain,FromEntity,ToEntity,message) ]
+    --[  ]->
+    [ !MessageOnChannel(FromDomain,ToDomain,FromEntity,ToEntity,message) ]
+
+rule SecureChannel_Receive:
+    [ !MessageOnChannel(FromDomain,ToDomain,FromEntity,ToEntity,message) ]
+    --[  ]->
+    [ ChannelIn(FromDomain,ToDomain,FromEntity,ToEntity,message) ]
+
+/* Compromise */
+rule SecureChannel_CompromiseFrom [color=#DC3545]:
+    [
+        !Compromised(FromEntity),
+        !MessageOnChannel(FromDomain,ToDomain,FromEntity,ToEntity,message)
+    ]
+    --[ CompromiseHappened(message) ]->
+    [ Out(message) ]
+
+rule SecureChannel_CompromiseTo [color=#DC3545]:
+    [
+        !Compromised(ToEntity),
+        !MessageOnChannel(FromDomain,ToDomain,FromEntity,ToEntity,message)
+    ]
+    --[ CompromiseHappened(message) ]->
+    [ Out(message) ]
+
+rule SecureChannel_CompromiseFromDomain [color=#DC3545]:
+    [
+        !CompromisedDomain(FromDomain),
+        !MessageOnChannel(FromDomain,ToDomain,FromEntity,ToEntity,message)
+    ]
+    --[ CompromiseHappened(message) ]->
+    [ Out(message) ]
+
+rule SecureChannel_CompromiseToDomain [color=#DC3545]:
+    [
+        !CompromisedDomain(ToDomain),
+        !MessageOnChannel(FromDomain,ToDomain,FromEntity,ToEntity,message)
+    ]
+    --[ CompromiseHappened(message) ]->
+    [ Out(message) ]
+
+ /* Non Public Information And Disclosure */
+  /*
+         Omitting modeling compromise of other states as well as entities - not necessary
+         Omitting modeling exchanging identity/keys due to injection - not necessary here too, to much complexity
+ */
+
+    restriction NonPublicInformationCompromisePreperationOnce:
+    "
+        All ruleinstance #i #j .
+            NonPublicInformationPreperation(ruleinstance)@i &
+            NonPublicInformationPreperation(ruleinstance)@j
+                ==>
+                    #i=#j
+    "
+
+    /* Generation and Distribution of Key */
+        rule TgwWithHsm_SecretKeySetup [color=#E87D88]:
+            [
+                Fr(~secretKey),
+                !SomeTgwWithHsm($TgwWithHsm)
+            ]
+            --[
+                SecretKey(~secretKey),
+                InitSecretKey(~secretKey),
+                NonPublicInformationPreperation('TGW_SK')
+            ]->
+            [ !NonPublicInformation_TgwWithHsm_GeneratedSecretKey($TgwWithHsm,~secretKey) ]
+
+        rule TgwWithHsm_LeakSecretKey [color=#DC3545]:
+            [
+                !NonPublicInformation_TgwWithHsm_GeneratedSecretKey($TgwWithHsm,~secretKey),
+                !Compromised($TgwWithHsm)
+            ]
+            --[ ]->
+            [ Out(~secretKey) ]
+
+        rule UseCase_KeySetup [color=#E87D88]:
+            [
+                !SomeUseCase($UseCase),
+                !Privatekey($UseCase,~privatekeyUseCase)
+            ]
+            --[ NonPublicInformationPreperation('UC_SK') ]->
+            [ !NonPublicInformation_UseCase_KeySetup($UseCase,~privatekeyUseCase) ]
+
+        rule UseCase_KeySetup_Compromise [color=#DC3545]:
+            [
+                !NonPublicInformation_UseCase_KeySetup($UseCase,~privatekeyUseCase),
+                !Compromised($UseCase)
+            ]
+            --[ PrivatekeyReveal($UseCase) ]->
+            [ Out(~privatekeyUseCase) ]
+
+        rule UseCase_CompromiseSecretKey [color=#DC3545]:
+            [
+                !NonPublicState_UseCase_PosessionSecretKey($UseCase,~privatekeyUseCase,~secretKey),
+                !Compromised($UseCase)
+            ]
+            --[  ]->
+            [ Out(~secretKey) ]
+
+        rule Target_CompromiseSecretKey [color=#DC3545]:
+            [
+                !NonPublicState_Target_PosessionSecretKey($Target,~privatekeyTarget,~secretKey),
+                !Compromised($Target)
+            ]
+            --[  ]->
+            [ Out(~secretKey) ]
+
+    /* Transmission of Logfile */
+        rule UseCase_Init_Compromise [color=#DC3545]:
+            [
+                !NonPublicInformation_UseCase_Init($UseCase,~logfile),
+                !Compromised($UseCase)
+            ]
+            --[ ]->
+            [ Out(~logfile) ]
+
+        rule Target_KeySetup [color=#E87D88]:
+            [
+                !SomeTarget($Target),
+                !Privatekey($Target,~privatekeyTarget)
+            ]
+            --[ NonPublicInformationPreperation('T_SK') ]->
+            [ !NonPublicInformation_Target_KeySetup($Target,~privatekeyTarget) ]
+
+        rule Target_KeySetup_Compromise [color=#DC3545]:
+            [
+                !NonPublicInformation_Target_KeySetup($Target,~privatekeyTarget),
+                !Compromised($Target)
+            ]
+            --[ PrivatekeyReveal($Target) ]->
+            [ Out(~privatekeyTarget) ]
+
+        rule Target_Finish_Compromise [color=#DC3545]:
+            [
+                !NonPublicInformation_Target_Finish($Target,~logfile),
+                !Compromised($Target)
+            ]
+            --[ ]->
+            [ Out(~logfile) ]
+
+        rule Router_KeySetup [color=#E87D88]:
+            [
+                !SomeRouter($Router),
+                !Privatekey($Router,~privatekeyRouter)
+            ]
+            --[ NonPublicInformationPreperation('R_SK') ]->
+            [ !NonPublicInformation_Router_KeySetup($Router,~privatekeyRouter) ]
+
+        rule Router_KeySetup_Compromise [color=#DC3545]:
+            [
+                !NonPublicInformation_Router_KeySetup($Router,~privatekeyRouter),
+                !Compromised($Router)
+            ]
+            --[ PrivatekeyReveal($Router) ]->
+            [ Out(~privatekeyRouter) ]
+
+        rule Router_Intermediate_Compromise [color=#DC3545]:
+            [
+                !NonPublicInformation_Router_Intermediate($Router,wrappedLogfile),
+                !Compromised($Router)
+            ]
+            --[ ]->
+            [ Out(wrappedLogfile) ]
+
+        rule TCU_Intermediate_Compromise [color=#DC3545]:
+            [
+                !NonPublicInformation_TCU_Intermediate($TCU,wrappedLogfile),
+                !Compromised($TCU)
+            ]
+            --[ ]->
+            [ Out(wrappedLogfile) ]
+
+        rule Enable_Adversary_LogfileValidation [color=#E87D88]:
+            [ In(~logfile) ]
+            --[
+                Secret(~logfile),
+                InjectedLogfile(~logfile)
+            ]->
+            [  ]
+
+        restriction onlyAcceptRealLogfiles:
+        "
+            All logfile #i .
+                InjectedLogfile(logfile)@i
+                    ==>
+                        Ex #j .
+                            InitLogfile(logfile)@j &
+                            #j<#i
+
+        "
+
+/* Protocol */
+
+    restriction EveryProtocolStepOccursOnlyOnce:
+    "
+        All step #i #j .
+            ProtocolStep(step)@i &
+            ProtocolStep(step)@j
+                ==>
+                    #i=#j
+    "
+
+    /* Generation and Distribution of Key */
+        /* Router->UseCase */
+            rule TgwWithHsm_TransmitSecretToUseCase:
+                let
+                    encryptedSecretKey = aenc(~secretKey,publickeyUseCase)
+                    outgoingMessage = <'TO_USECASE_ENCRYPTED_SECRET_KEY',encryptedSecretKey>
+                in
+                [
+                    !NonPublicInformation_TgwWithHsm_GeneratedSecretKey($TgwWithHsm,~secretKey),
+                    !SomeTgwWithHsm($TgwWithHsm),
+
+                    !SomeUseCase($UseCase),
+                    !Publickey($UseCase,publickeyUseCase)
+                ]
+                --[
+                    ProtocolStep('TGW_TS_TUC'),
+                    SecretKey(~secretKey),
+                    OUT_TS_TGW(outgoingMessage)
+                ]->
+                [ ChannelOut(CarIntermediate(),CarInternal(),$TgwWithHsm,$UseCase,outgoingMessage) ]
+
+            rule UseCase_ReceiveEncryptionKey:
+                let
+                    publickeyUseCase = pk(~privatekeyUseCase)
+                    encryptedSecretKey = aenc(~secretKey,publickeyUseCase)
+                    incomingMessage = <'TO_USECASE_ENCRYPTED_SECRET_KEY',encryptedSecretKey>
+                in
+                [
+                    !NonPublicInformation_UseCase_KeySetup($UseCase,~privatekeyUseCase),
+                    ChannelIn(CarIntermediate(),CarInternal(),$TgwWithHsm,$UseCase,incomingMessage),
+
+                    !SomeTgwWithHsm($TgwWithHsm),
+                    !SomeUseCase($UseCase),
+                    !Privatekey($UseCase,~privatekeyUseCase)
+                ]
+                --[
+                    ProtocolStep('UC_R_TS'),
+                    SecretKey(~secretKey),
+                    EndUsecaseSecretkey(~secretKey),
+                    IN_TS_UC(incomingMessage)
+                ]->
+                [
+                    !NonPublicState_UseCase_PosessionSecretKey($UseCase,~privatekeyUseCase,~secretKey)
+                ]
+
+        /* Router->Target */
+        rule TgwWithHsm_TransmitSecretToTarget:
+            let
+                encryptedSecretKey = aenc(~secretKey,publickeyTarget)
+                outgoingMessage = <'TO_TARGET_ENCRYPTED_SECRET_KEY',encryptedSecretKey>
+            in
+            [
+                !NonPublicInformation_TgwWithHsm_GeneratedSecretKey($TgwWithHsm,~secretKey),
+                !SomeTgwWithHsm($TgwWithHsm),
+
+                !SomeTarget($Target),
+                !Publickey($Target,publickeyTarget),
+
+                !SomeRouter($Router)
+            ]
+            --[
+                ProtocolStep('TGW_TS_T'),
+                SecretKey(~secretKey),
+                OUT_TS_TGW(outgoingMessage)
+            ]->
+            [ ChannelOut(CarIntermediate(),CarInternetFacing(),$TgwWithHsm,$Router,outgoingMessage) ]
+
+        rule Router_PassEncryptionKey:
+            let
+                incomingMessage = <'TO_TARGET_ENCRYPTED_SECRET_KEY',encryptedSecretKey>
+                outgoingMessage = incomingMessage
+            in
+            [
+                ChannelIn(CarIntermediate(),CarInternetFacing(),$TgwWithHsm,$Router,incomingMessage),
+
+                !SomeTgwWithHsm($TgwWithHsm),
+                !SomeRouter($Router),
+                !SomeTCU($TCU)
+            ]
+            --[
+                ProtocolStep('R_TS_T'),
+                IN_TS_R(incomingMessage),
+                OUT_TS_R(outgoingMessage)
+            ]->
+            [ ChannelOut(CarInternetFacing(),CarInternetFacing(),$Router,$TCU,outgoingMessage) ]
+
+        rule TCU_PassEncryptionKey:
+            let
+                incomingMessage = <'TO_TARGET_ENCRYPTED_SECRET_KEY',encryptedSecretKey>
+                outgoingMessage = incomingMessage
+            in
+            [
+                ChannelIn(CarInternetFacing(),CarInternetFacing(),$Router,$TCU,incomingMessage),
+
+                !SomeRouter($Router),
+                !SomeTCU($TCU),
+                !SomeTarget($Target)
+            ]
+            --[
+                ProtocolStep('TCU_TS_T'),
+                IN_TS_TCU(incomingMessage),
+                OUT_TS_TCU(outgoingMessage)
+            ]->
+            [ ChannelOut(CarInternetFacing(),Backend(),$TCU,$Target,outgoingMessage) ]
+
+        rule Target_ReceiveEncryptionKey:
+            let
+                publickeyTarget = pk(~privatekeyTarget)
+                encryptedSecretKey = aenc(~secretKey,publickeyTarget)
+                incomingMessage = <'TO_TARGET_ENCRYPTED_SECRET_KEY',encryptedSecretKey>
+            in
+            [
+                !NonPublicInformation_Target_KeySetup($Target,~privatekeyTarget),
+                ChannelIn(CarInternetFacing(),Backend(),$TCU,$Target,incomingMessage),
+
+                !SomeTCU($TCU),
+
+                !SomeTarget($Target),
+                !Publickey($Target,publickeyTarget),
+                !Privatekey($Target,~privatekeyTarget)
+            ]
+            --[
+                ProtocolStep('T_RS_TS'),
+                SecretKey(~secretKey),
+                EndTargetSecretkey(~secretKey),
+                IN_TS_T(incomingMessage)
+            ]->
+            [
+                !NonPublicState_Target_PosessionSecretKey($Target,~privatekeyTarget,~secretKey)
+            ]
+
+    /* Transmission of Logfile */
+        rule UseCase_Init:
+            let
+                wrappedLogfile = senc(~logfile,~secretKey)
+                encryptedWrappedLogfile = aenc(wrappedLogfile,publickeyRouter)
+                message = <'ENCRYPTED_WRAPPED_LOGFILE',encryptedWrappedLogfile>
+            in
+            [
+                !NonPublicState_UseCase_PosessionSecretKey($UseCase,~privatekeyUseCase,~secretKey),
+
+                Fr(~logfile),
+
+                !SomeUseCase($UseCase),
+
+                !SomeRouter($Router),
+                !Publickey($Router,publickeyRouter),
+
+                !SomeTarget($Target)
+            ]
+            --[
+                ProtocolStep('UC_I_P'),
+                Secret(~logfile),
+                SecretKey(~secretKey),
+                InitLogfile(~logfile),
+                Init($UseCase,$Target,~logfile),
+                OUT_UC_P(message)
+            ]->
+            [
+                !NonPublicInformation_UseCase_Init($UseCase,~logfile),
+                ChannelOut(CarInternal(),CarIntermediate(),$UseCase,$TgwWithHsm,message)
+            ]
+
+        rule TgwWithHsm_PassEncrypted:
+            let
+                incomingMessage = <'ENCRYPTED_WRAPPED_LOGFILE',encryptedWrappedLogfile>
+                outgoingMessage = incomingMessage
+            in
+            [
+                ChannelIn(CarInternal(),CarIntermediate(),$UseCase,$TgwWithHsm,incomingMessage),
+
+                !SomeUseCase($UseCase),
+                !SomeTgwWithHsm($TgwWithHsm),
+                !SomeRouter($Router)
+            ]
+            --[
+                ProtocolStep('TGW_P_P'),
+                IN_TGW_P(incomingMessage),
+                OUT_TGW_P(outgoingMessage)
+            ]->
+            [
+                ChannelOut(CarIntermediate(),CarInternetFacing(),$TgwWithHsm,$Router,outgoingMessage)
+            ]
+
+        rule Router_PassEncrypted:
+            let
+                publickeyRouter = pk(~privateKeyRouter)
+                encryptedWrappedLogfile = aenc(wrappedLogfile,publickeyRouter)
+                incomingMessage = <'ENCRYPTED_WRAPPED_LOGFILE',encryptedWrappedLogfile>
+                outgoingMessage = <'WRAPPED_LOGFILE',wrappedLogfile>
+            in
+            [
+                !NonPublicInformation_Router_KeySetup($Router,~privateKeyRouter),
+                ChannelIn(CarIntermediate(),CarInternetFacing(),$TgwWithHsm,$Router,incomingMessage),
+
+                !SomeTgwWithHsm($TgwWithHsm),
+
+                !SomeRouter($Router),
+                !Privatekey($Router,~privateKeyRouter),
+                !Publickey($Router,publickeyRouter),
+
+                !SomeTCU($TCU)
+            ]
+            --[
+                ProtocolStep('R_PE_P'),
+                IN_R_P(incomingMessage),
+                OUT_R_P(outgoingMessage)
+            ]->
+            [
+                !NonPublicInformation_Router_Intermediate($Router,wrappedLogfile),
+                ChannelOut(CarInternetFacing(),CarInternetFacing(),$Router,$TCU,outgoingMessage)
+            ]
+
+        rule TCU_PassEncrypted:
+            let
+                incomingMessage = <'WRAPPED_LOGFILE',wrappedLogfile>
+
+                newEncryptedWrappedLogfile = aenc(wrappedLogfile,publicKeyTarget)
+                outgoingMessage = <'ENCRYPTED_WRAPPED_LOGFILE',newEncryptedWrappedLogfile>
+            in
+            [
+                ChannelIn(CarInternetFacing(),CarInternetFacing(),$Router,$TCU,incomingMessage),
+
+                !SomeRouter($Router),
+                !SomeTCU($TCU),
+                !SomeTarget($Target),
+                !Publickey($Target,publicKeyTarget)
+            ]
+            --[
+                ProtocolStep('TCU_PE_P'),
+                IN_TCU_P(incomingMessage),
+                OUT_TCU_P(outgoingMessage)
+            ]->
+            [
+                !NonPublicInformation_TCU_Intermediate($TCU,wrappedLogfile),
+                ChannelOut(CarInternetFacing(),Backend(),$TCU,$Target,outgoingMessage)
+            ]
+
+        rule Target_DecryptAndFinish:
+            let
+                wrappedLogfile = senc(~logfile,~secretKey)
+                publickeyTarget = pk(~privatekeyTarget)
+                encryptedWrappedLogfile = aenc(wrappedLogfile,publickeyTarget)
+                incomingMessage = <'ENCRYPTED_WRAPPED_LOGFILE',encryptedWrappedLogfile>
+            in
+            [
+                !NonPublicState_Target_PosessionSecretKey($Target,~privatekeyTarget,~secretKey),
+                !NonPublicInformation_Target_KeySetup($Target,~privatekeyTarget),
+
+                ChannelIn(CarInternetFacing(),Backend(),$TCU,$Target,incomingMessage),
+
+                !SomeTCU($TCU),
+
+                !SomeTarget($Target),
+                !Privatekey($Target,~privatekeyTarget),
+
+                !SomeUseCase($UseCase)
+            ]
+            --[
+                ProtocolStep('T_DF_P'),
+                Secret(~logfile),
+                End($UseCase,$Target,~logfile),
+                SecretKey(~secretKey),
+                EndWithSecretKey(~secretKey),
+                IN_T_P(incomingMessage)
+            ]->
+            [
+                !NonPublicInformation_Target_Finish($Target,~logfile)
+            ]
+
+/* Lemmas */
+lemma types [sources]:
+"
+    (
+        All encryptedSecretKey #j .
+            IN_TS_UC(<'TO_USECASE_ENCRYPTED_SECRET_KEY',encryptedSecretKey>)@j
+                ==>
+                    Ex #i .
+                        OUT_TS_TGW(<'TO_USECASE_ENCRYPTED_SECRET_KEY',encryptedSecretKey>)@i
+    ) & (
+        All encryptedSecretKey #j .
+        IN_TS_R(<'TO_TARGET_ENCRYPTED_SECRET_KEY',encryptedSecretKey>)@j
+                ==>
+                    Ex #i .
+                    OUT_TS_TGW(<'TO_TARGET_ENCRYPTED_SECRET_KEY',encryptedSecretKey>)@i
+    ) & (
+        All encryptedSecretKey #j .
+        IN_TS_TCU(<'TO_TARGET_ENCRYPTED_SECRET_KEY',encryptedSecretKey>)@j
+                ==>
+                    Ex #i .
+                    OUT_TS_R(<'TO_TARGET_ENCRYPTED_SECRET_KEY',encryptedSecretKey>)@i
+    ) & (
+        All encryptedSecretKey #j .
+            IN_TS_T(<'TO_TARGET_ENCRYPTED_SECRET_KEY',encryptedSecretKey>)@j
+                ==>
+                    Ex #i .
+                        OUT_TS_TCU(<'TO_TARGET_ENCRYPTED_SECRET_KEY',encryptedSecretKey>)@i
+    ) & (
+        All encryptedWrappedLogfile #j .
+            IN_TGW_P(<'ENCRYPTED_WRAPPED_LOGFILE',encryptedWrappedLogfile>)@j
+                ==>
+                    Ex #i .
+                        OUT_UC_P(<'ENCRYPTED_WRAPPED_LOGFILE',encryptedWrappedLogfile>)@i
+    ) & (
+        All encryptedWrappedLogfile #j .
+            IN_R_P(<'ENCRYPTED_WRAPPED_LOGFILE',encryptedWrappedLogfile>)@j
+                ==>
+                    Ex #i .
+                        OUT_TGW_P(<'ENCRYPTED_WRAPPED_LOGFILE',encryptedWrappedLogfile>)@i
+    ) & (
+        All wrappedLogfile #j .
+            IN_TCU_P(<'WRAPPED_LOGFILE',wrappedLogfile>)@j
+                ==>
+                    Ex #i .
+                        OUT_R_P(<'WRAPPED_LOGFILE',wrappedLogfile>)@i
+    ) & (
+        All encryptedWrappedLogfile #j .
+            IN_T_P(<'ENCRYPTED_WRAPPED_LOGFILE',encryptedWrappedLogfile>)@j
+                ==>
+                    Ex #i .
+                        OUT_TCU_P(<'ENCRYPTED_WRAPPED_LOGFILE',encryptedWrappedLogfile>)@i
+    )
+"
+
+lemma executable:
+exists-trace
+"
+    Ex secretKey #i #j .
+        InitSecretKey(secretKey)@i  &
+        EndWithSecretKey(secretKey)@j
+"
+
+lemma executable_key_setup:
+exists-trace
+"
+    Ex secretKey #i #j #k .
+        InitSecretKey(secretKey)@i &
+        EndUsecaseSecretkey(secretKey)@j &
+        EndTargetSecretkey(secretKey)@k
+"
+
+lemma executable_protocol:
+exists-trace
+"
+    Ex useCase target logfile #i #j .
+        Init(useCase,target,logfile)@i  &
+        End(useCase,target,logfile)@j
+"
+
+lemma secret_only_known_on_compromise:
+"
+    All logfile #i .
+        Secret(logfile)@i &
+        (not Ex entity #r . PkiPrivatekeyReveal(entity)@r)
+            ==>
+                (not
+                    Ex #k .
+                        K(logfile)@k
+                )
+"
+
+end

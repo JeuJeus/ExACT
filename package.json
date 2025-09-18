@@ -1,0 +1,22 @@
+{
+  "name": "overview",
+  "version": "1.0.0",
+  "main": "src/api/server.js",
+  "scripts": {
+    "test": "jest",
+    "run-mvp": "node src/tamarinRunner/run-mvp.js",
+    "parse-logs": "node src/logParser/parse-logs.js",
+    "start": "node src/api/server.js"
+  },
+  "author": "Julius Figge",
+  "description": "EXtended Adversary Compromise Tool (ExACT). A tool enabling the Analysis of Attack Resilience Hyperproperties (ARH) with Tamarin.",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-util": "^29.7.0"
+  }
+}

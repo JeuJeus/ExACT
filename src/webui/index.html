@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExACT</title>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <link rel="stylesheet" href="styles.css">
+    <script src="table.js"></script>
+    <script src="graph.js"></script>
+    <script src="fetchAndDisplayResults.js"></script>
+</head>
+<body>
+<div class="filter-settings-wrapper">
+    <div>
+        <div class="hint-block">
+            <div class="hint-content">Nodes represent Sets of compromised Parts. Parts are Domains,<span
+                    class="dark-blue-text">Entities</span>.
+            </div>
+        </div>
+    </div>
+    <div>
+        <label>
+            Min Parts involved: <input onkeydown="resetGraphOnEnter()" type="number" id="min-label-length"
+                                       value="0" min="0">
+        </label>
+        <label>
+            Max Parts involved: <input onkeydown="resetGraphOnEnter()" type="number" id="max-label-length"
+                                       value="10" min="0">
+        </label>
+        <button class="UpdateGraphLabelLength" onclick="filterResultsAndRender()">Update Graph</button>
+    </div>
+    <div>Show only nodes with...
+        <label>
+            <input type="checkbox" id="filter-domains" onchange="filterResultsAndRender()"> Domains
+        </label>
+        <label>
+            <input type="checkbox" id="filter-entities" onchange="filterResultsAndRender()"> <span
+                class="dark-blue-text">Entities</span>
+        </label>
+    </div>
+    <div id="sender-receiver-entities-wrapper">
+        <span>Hide nodes with the following <span class="dark-blue-text">Entities</span>:</span>
+    </div>
+    <div>Show nodes where...
+        <label class="green-text">
+            <input type="checkbox" id="filter-all-lemmas-hold" onchange="filterResultsAndRender()"> All Lemmas hold
+        </label>
+        <label class="red-text">
+            <input type="checkbox" id="filter-not-all-lemmas-hold" onchange="filterResultsAndRender()"> Not all Lemmas
+            hold
+        </label>
+        <label class="purple-text">
+            <input type="checkbox" id="filter-smallest-compromised-subset" onchange="filterResultsAndRender()"> Smallest
+            Compromise Subset
+        </label>
+        <label class="pink-text">
+            <input type="checkbox" id="filter-single-point-of-failure" onchange="filterResultsAndRender()"> Single Point
+            of Failure
+        </label>
+        <label class="blue-text">
+            <input type="checkbox" id="filter-never-compromise-responsible" onchange="filterResultsAndRender()"> Not
+            Responsible for Compromise
+        </label>
+        <label class="orange-text">
+            <input type="checkbox" id="filter-necessary-but-not-sufficient" onchange="filterResultsAndRender()">
+            Necessary but Not Sufficient for Compromise
+        </label>
+    </div>
+</div>
+<div class="content-wrapper">
+    <div class="graph-score-wrapper">
+        <div class="graph-wrapper">
+            <div class="graph-settings-wrapper">
+                <div>
+                    <label>
+                        <input type="checkbox" id="activate-threshold" onchange="filterGraphLinks()"> Show only edges
+                        with
+                        <br>
+                        <strong>less</strong> than Threshold:
+                        <br><input type="number" id="link-threshold" value="2" min="2" onchange="filterGraphLinks()">
+                        <br>
+                        differing elements
+                    </label>
+                </div>
+                <div>
+                    <div>
+                        <label>
+                            Max Nodes: <input type="range" id="max-nodes-slider" min="0" max="500" value="100"
+                                              onchange="updateMaxNodes(this.value)"
+                                              oninput="updateSliderValue()">
+                            <span id="max-nodes-value">100</span>/<span id="max-nodes-available-value">500</span>
+                        </label>
+                        <div id="hidden-nodes-info">Hidden Nodes: 0</div>
+                    </div>
+                </div>
+            </div>
+            <div class="graph-wrapper">
+                <svg class="graph" width="3000" height="3000"></svg>
+            </div>
+        </div>
+        <div class="score-wrapper" id="score-wrapper">
+            <div class="overall-score">
+                <div class="score-info">
+                    <p><strong>Overall Score</strong></p>
+                    <div class="score-title">Score <strong id="overall-score-value">0</strong></div>
+                </div>
+                <div class="score-compromises-list">Matching Compromises:
+                    <ul id="overall-score-list"></ul>
+                </div>
+            </div>
+            <div class="score-without-sender-receiver">
+                <div class="score-info">
+                    <p><strong>Score without <span class="dark-blue-text" id="sender-receiver-entities"></span></strong></p>
+                    <div class="score-title">Score <strong id="without-sender-receiver-score-value">0</strong></div>
+                </div>
+                <div class="score-compromises-list">Matching Compromises:
+                    <ul id="without-sender-receiver-score-list"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="table-wrapper">
+        <div class="table-container">
+            <table id="data-table">
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Entities</th>
+                    <th>Domains</th>
+                    <th>Do All Lemmas Hold</th>
+                    <th>Never<br> Responsible for<br> Compromise</th>
+                    <th>Smallest<br> Compromise<br> Subset</th>
+                    <th>Single<br> Point of<br> Failure</th>
+                    <th>Necessary but Not Sufficient Condition</th>
+                    <th>Wellformed</th>
+                    <th>No.# <br>Verified <br>Lemmas</th>
+                    <th>Verified Lemmas</th>
+                    <th>No.# <br>Falsified <br>Lemmas</th>
+                    <th>Falsified Lemmas</th>
+                    <th>Traces Visualization</th>
+                </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>
