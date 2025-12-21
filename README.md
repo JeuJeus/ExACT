@@ -1,6 +1,10 @@
 # Extended Adversary Compromise Tool (ExACT)
 This repository contains the sourcecode for the prototypical tool implementation *ExACT*.
 
+# Related Paper
+You can find our research paper under the following DOI at Springer Nature : [https://doi.org/10.1007/978-3-032-10444-1_2](https://doi.org/10.1007/978-3-032-10444-1_2).  
+Additionally we provide a [Pre-Print Version](https://julius.figge.eu/papers/Preprint_Paper_Attack-Resilience-Hyperproperties_Figge-et-al.pdf).
+
 # Running 
 ## How to Run
 Provided through `run.sh` a script exists to automatically run the tool with the default (Case study from the paper) configuration.  
