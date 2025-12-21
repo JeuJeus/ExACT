@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+message: "If you use this software or research, please cite it as below."
+authors:
+  - family-names: "Figge"
+    given-names: "Julius"
+  - family-names: "Knuplesch"
+    given-names: "David"
+  - family-names: "Maletti"
+    given-names: "Andreas"
+  - family-names: "Zuvic"
+    given-names: "Dragan"
+title: "Attack Resilience Hyperproperties: Formal Security Analysis of (Automotive) Network Architectures Under Active Compromise"
+version: 1.0.0
+date-released: 2025-11-12
+url: "https://github.com/JeuJeus/ExACT"
+preferred-citation:
+  type: conference-paper
+  authors:
+    - family-names: "Figge"
+      given-names: "Julius"
+    - family-names: "Knuplesch"
+      given-names: "David"
+    - family-names: "Maletti"
+      given-names: "Andreas"
+    - family-names: "Zuvic"
+      given-names: "Dragan"
+  title: "Attack Resilience Hyperproperties: Formal Security Analysis of (Automotive) Network Architectures Under Active Compromise"
+  collection-title: "International Conference on Software Engineering and Formal Methods"
+  year: 2025
+  start: 15
+  end: 33
+  publisher:
+    name: "Springer"
