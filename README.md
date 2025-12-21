@@ -1,6 +1,7 @@
 # Extended Adversary Compromise Tool (ExACT)
 This repository contains the sourcecode for the prototypical tool implementation *ExACT*.
 
+# Running 
 ## How to Run
 Provided through `run.sh` a script exists to automatically run the tool with the default (Case study from the paper) configuration.  
 
@@ -12,7 +13,6 @@ In order to verify another Network Architecture / Protocol setup, make sure to c
 - `mvp.spthy` for the *Architecture* and *Protocol*, as well as reflecting the above configured
 The `package.json` provides targets to run the desired steps individually.
 
-
 ## Requirements
 In order to run this tool you need to have installed
 - node and npm 
@@ -20,4 +20,16 @@ In order to run this tool you need to have installed
 - (dot)
 - (python) only used for progress estimation
 
+# Citation
+If you use this software or research, please cite it as below.
+```latex
+@inproceedings{figge2025attack,
+  title={Attack Resilience Hyperproperties: Formal Security Analysis of (Automotive) Network Architectures Under Active Compromise},
+  author={Figge, Julius and Knuplesch, David and Maletti, Andreas and Zuvic, Dragan},
+  booktitle={International Conference on Software Engineering and Formal Methods},
+  pages={15--33},
+  year={2025},
+  organization={Springer}
+}
+```
 
