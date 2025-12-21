@@ -1,5 +1,7 @@
 # Extended Adversary Compromise Tool (ExACT)
-This repository contains the sourcecode for the prototypical tool implementation *ExACT*.
+This repository contains the sourcecode for the prototypical tool implementation *ExACT*.  
+It serves as a reference implementation for our contribution enabling the analysis of 'Attack Resilience Hyperproperties' (ARHs) with the Tamarin Prover.
+Or in other words, this repository extends the Tamarin Security protocol verification tool through a wrapper, enabling the ability to formally verify security properties requiring hyperproperty based analysis.
 
 # Related Paper
 You can find our research paper under the following DOI at Springer Nature : [https://doi.org/10.1007/978-3-032-10444-1_2](https://doi.org/10.1007/978-3-032-10444-1_2).  
