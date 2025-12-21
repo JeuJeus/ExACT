@@ -5,6 +5,14 @@ if ! command -v tamarin-prover &> /dev/null; then
     exit 1
 fi
 
+npm install
+
+if [ $? -ne 0 ]; then
+  echo "Failed to install npm dependencies"
+  kill $PROGRESS_PID
+  exit 1
+fi
+
 rm -rf tamarin_results
 
 python src/progress.py &
@@ -22,14 +30,6 @@ npm run parse-logs
 
 if [ $? -ne 0 ]; then
   echo "Failed to run parse-logs.js"
-  kill $PROGRESS_PID
-  exit 1
-fi
-
-npm install
-
-if [ $? -ne 0 ]; then
-  echo "Failed to install npm dependencies"
   kill $PROGRESS_PID
   exit 1
 fi
