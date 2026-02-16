@@ -16,7 +16,8 @@ In order to verify another Network Architecture / Protocol setup, make sure to c
 - `.env` for the
   - relevant *Entities* i.e. ECUs and other protocol participants
   - involved *Domains* i.e. the network segments and trust boundaries as well as physical boundaries
-- `mvp.spthy` for the *Architecture* and *Protocol*, as well as reflecting the above configured  
+- `mvp.spthy` for the *Architecture* and *Protocol*, as well as reflecting the above configured
+  
 The `package.json` provides targets to run the desired steps individually.
 
 ## Requirements
