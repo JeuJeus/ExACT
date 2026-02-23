@@ -3,6 +3,8 @@ This repository contains the sourcecode for the prototypical tool implementation
 It serves as a reference implementation for our contribution enabling the analysis of 'Attack Resilience Hyperproperties' (ARHs) with the Tamarin Prover.
 Or in other words, this repository extends the Tamarin Security protocol verification tool through a wrapper, enabling the ability to formally verify security properties requiring hyperproperty based analysis.
 
+![ExACT GUI](./res/ExACT-GUI_highDpi.png)
+
 # Related Paper
 You can find our research paper under the following DOI at Springer Nature : [https://doi.org/10.1007/978-3-032-10444-1_2](https://doi.org/10.1007/978-3-032-10444-1_2).  
 Additionally we provide a [Pre-Print Version](https://julius.figge.eu/papers/Preprint_Paper_Attack-Resilience-Hyperproperties_Figge-et-al.pdf).
